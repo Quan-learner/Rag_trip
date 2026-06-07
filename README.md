@@ -1,119 +1,110 @@
-# 旅游计划顾问 RAG 系统
+# 旅游计划顾问 RAG 系统 (Travel Planner RAG System)
 
-本项目实现了 `REQUIREMENTS.md` 的前后端分离方案：
+基于 Next.js 与 FastAPI 构建的全栈 RAG 旅游规划系统，融合向量检索与关键词检索，为您提供智能的出行规划体验。
 
-- 前端：`assistant-ui`（Next.js 15+ 风格，TypeScript，Tailwind）
-- 后端：`rag-backend`（FastAPI + ChromaDB + 本地 Ollama 模型）
-- 检索：向量检索 + BM25 + RRF + Cross-Encoder 重排
+## 目录
+
+- [截图 / 演示](#截图--演示)
+- [核心特性](#核心特性)
+- [项目结构](#项目结构)
+- [安装 (Installation)](#安装-installation)
+- [使用方法 (Usage)](#使用方法-usage)
+- [API / 功能说明](#api--功能说明)
+- [贡献指南 (Contributing)](#贡献指南-contributing)
+- [许可证 (License)](#许可证-license)
+
+## 截图 / 演示
+
+> *在此处替换为您项目的实际运行截图或 GIF 动图。*
+
+## 核心特性
+
+- **混合检索**：结合向量检索 (ChromaDB) 与 BM25 关键词检索。
+- **智能重排**：采用 RRF 融合算法与 Cross-Encoder 进行结果重排，提升检索精准度。
+- **本地化部署**：支持接入本地 Ollama 大模型与嵌入模型，保护数据隐私。
+- **现代化前端**：使用 Next.js 15+ 与 Tailwind CSS 打造的沉浸式对话界面。
 
 ## 项目结构
 
 ```text
 E:\Agent_project
-├─ assistant-ui      # Next.js + assistant-ui 前端
-├─ rag-backend       # FastAPI RAG 后端
-└─ REQUIREMENTS.md
+├─ assistant-ui      # 前端：Next.js + assistant-ui (TypeScript, Tailwind)
+├─ rag-backend       # 后端：FastAPI RAG 后端 (ChromaDB, Ollama)
+└─ 国内5A景区文档      # 数据：各类景区旅游攻略 Markdown 文件
 ```
 
-## 一键启动顺序（推荐）
+## 安装 (Installation)
 
-1. 启动 Ollama，并拉取模型
+### 1. 环境准备
+
+- Python 3.10+
+- Node.js 18+
+- [Ollama](https://ollama.com/) (若需使用本地大模型)
+
+### 2. 准备本地模型
+
+启动 Ollama，并拉取所需模型：
 
 ```bash
 ollama pull deepseek-r1:1.5b
 ollama pull nomic-embed-text:latest
 ```
 
-2. 启动后端
+### 3. 配置与启动后端 (rag-backend)
 
 ```bash
 cd rag-backend
 python -m venv .venv
+# Windows:
 .venv\Scripts\activate
+# macOS/Linux:
+# source .venv/bin/activate
+
 pip install -r requirements.txt
-copy .env.example .env
+cp .env.example .env
+# 启动后端服务
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-3. 启动前端
+### 4. 配置与启动前端 (assistant-ui)
 
 ```bash
 cd assistant-ui
-copy .env.example .env.local
+cp .env.example .env.local
 npm install
+# 启动前端服务
 npm run dev
 ```
 
-打开 `http://localhost:3000`。
+## 使用方法 (Usage)
 
-## 接口文档（后端）
+1. 确保后端的 FastAPI 运行在 `http://localhost:8000`，前端运行在 `http://localhost:3000`。
+2. 打开浏览器访问 `http://localhost:3000`。
+3. 您可以在系统中上传旅游攻略文档（如 `.md`, `.txt`, `.pdf`）。
+4. 在对话界面输入您的旅行需求（例如：“帮我规划 5 天京都自由行，预算 8000 元”），系统将结合知识库给出规划。
 
-### 1) `POST /upload`
+## API / 功能说明
 
-- 功能：上传文档并建立索引
-- 请求：`multipart/form-data`
-  - `file`: 文件（txt/md/pdf/json/csv）
-  - `title`: 可选
-  - `tags`: 可选（逗号分隔）
+后端主要提供以下功能端点（详见 `/docs` 接口文档）：
 
-### 2) `GET /documents`
+- **文档管理**：
+  - `POST /upload`：上传文档并构建索引。
+  - `GET /documents` & `GET /documents/{id}`：获取文档列表及详情。
+  - `PUT /documents/{id}`：更新文档信息并重建索引。
+  - `DELETE /documents/{id}`：删除文档及其向量数据。
+- **对话接口**：
+  - `POST /chat/stream`：接收前端请求，流式返回检索片段及 LLM 回复。
 
-- 功能：获取文档列表
+## 贡献指南 (Contributing)
 
-### 3) `GET /documents/{document_id}`
+我们非常欢迎对本项目做出贡献！如果您想改进本项目：
 
-- 功能：获取文档详情（含预览）
+1. Fork 本仓库。
+2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)。
+3. 提交您的修改 (`git commit -m 'Add some AmazingFeature'`)。
+4. 推送至分支 (`git push origin feature/AmazingFeature`)。
+5. 开启一个 Pull Request。
 
-### 4) `PUT /documents/{document_id}`
+## 许可证 (License)
 
-- 功能：更新文档标题/标签/内容（内容更新会增量重建索引）
-- 请求 JSON：
-
-```json
-{
-  "title": "东京 5 天游攻略",
-  "content": "新的文档正文...",
-  "tags": ["东京", "亲子"]
-}
-```
-
-### 5) `DELETE /documents/{document_id}`
-
-- 功能：删除文档与向量索引
-
-### 6) `POST /chat`
-
-- 功能：非流式问答
-- 请求 JSON：
-
-```json
-{
-  "query": "帮我规划 5 天京都自由行",
-  "history": [
-    { "role": "user", "content": "我预算 8000 元" },
-    { "role": "assistant", "content": "好的，我先确认..." }
-  ],
-  "top_k": 10,
-  "rerank_top_k": 3,
-  "return_sources": true
-}
-```
-
-### 7) `POST /chat/stream`
-
-- 功能：流式问答，返回 `application/x-ndjson`
-- 事件类型：
-  - `source`：来源片段
-  - `token`：增量文本
-  - `done`：结束
-  - `error`：异常
-
-## 前后端联调说明
-
-- 前端 `assistant-ui/app/api/chat/route.ts` 已作为适配层：
-  - 接收 assistant-ui 的消息格式
-  - 调用后端 `/chat/stream`
-  - 将后端事件转回 assistant-ui 可消费的 UI message stream
-
-因此前端不直接依赖 OpenAI/Claude/GLM SDK，后续模型切换主要在后端完成。
-
+本项目基于 [MIT License](LICENSE) 开源。欢迎自由使用与分享。

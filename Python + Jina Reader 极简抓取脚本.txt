@@ -1,0 +1,53 @@
+import os
+import re
+import requests
+
+def fetch_and_save_travel_doc(url, file_name, save_dir="./travel_raw_docs"):
+    """
+    使用 Jina Reader 将任意旅游网页转化为干净的 Markdown 并保存
+    """
+    # 如果保存目录不存在，自动创建
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    
+    # 💡 核心创新点：在目标 URL 前面强行拼接 Jina Reader 的官方网关
+    # 这样 Jina 的服务器会自动帮我们爬取、去广告、并排版成 Markdown 返回
+    jina_url = f"https://r.jina.ai/{url}"
+    
+    print(f"正在通过 Jina 提取网页: {url} ...")
+    
+    try:
+        # 发送标准的 GET 请求
+        response = requests.get(jina_url, timeout=15)
+        
+        # 💡 主动检查：如果 HTTP 状态码不是 200，说明抓取失败（可能是对方网站反爬或链接断了）
+        if response.status_code != 200:
+            print(f"❌ 抓取失败，状态码: {response.status_code}")
+            return
+            
+        # 拿到清洗后的 Markdown 文本
+        markdown_content = response.text
+        
+        # 拼接最终的文件保存路径
+        full_path = os.path.join(save_dir, f"{file_name}.md")
+        
+        # 将文本写入本地文件
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(markdown_content)
+            
+        print(f"👑 成功！干净的文档已保存至: {full_path}")
+        
+    except Exception as e:
+        print(f"💥 发生未知错误: {e}")
+
+if __name__ == "__main__":
+    # 📥 在这里替换成你刚刚在搜索引擎里找到的真实旅游攻略网页链接
+    target_urls = {
+        "xian_4days": "https://www.mafengwo.cn/i/24827744.html?sys_ver=", 
+        "budget_1500": "https://www.xiaohongshu.com/explore/69e055bb0000000023014851?xsec_token=AB0sJeOvqVFlU5RGEs4FRGSm62J68tl6ndo2GshO3HaEA=&xsec_source=pc_search&source=web_explore_feed",
+        "hangzhou_slow": "https://www.xiaohongshu.com/explore/69ba5c37000000001a027158?xsec_token=ABUXbA1aNBWlniv7XrWhfwIb_X7W_R7SnLSszU01rz1_k=&xsec_source=pc_search&source=web_search_result_notes" 
+    }
+    
+    # 循环调用函数进行批量抓取
+    for name, url in target_urls.items():
+        fetch_and_save_travel_doc(url, name)

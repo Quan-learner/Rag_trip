@@ -98,6 +98,34 @@ async function parseApiError(response: Response): Promise<string> {
   return raw;
 }
 
+const PRE_SEEDED_TITLES = new Set([
+  "上海", "中国5A景区-四川省", "四川省", "四川省5A景区攻略", "内蒙古", "北京", "北京5A景区攻略", 
+  "吉林", "宁夏", "安徽", "山东", "山西", "广东", "广西", "新疆", "江苏", "江西", "河北", 
+  "河南", "浙江", "海南", "湖北", "湖南", "甘肃", "福建", "西藏", "贵州", "辽宁", 
+  "重庆", "陕西", "陕西5A景区攻略", "青海", "黑龙江", "吉林省", "安徽省", "山东省", "山西省", 
+  "广东省", "江苏省", "江西省", "河北省", "河南省", "浙江省", "海南省", "湖北省", "湖南省", 
+  "甘肃省", "福建省", "贵州省", "辽宁省", "陕西省", "青海省", "黑龙江省", "四川省", "西藏自治区", 
+  "新疆维吾尔自治区", "宁夏回族自治区", "广西壮族自治区", "内蒙古自治区", "北京市", "上海市", "重庆市",
+  "北京市5A景区旅游攻略", "陕西省5A景区旅游攻略", "云南省5A景区旅游攻略", "云南省"
+]);
+
+function isPreSeededTravelDoc(doc: DocumentSummary): boolean {
+  // 1. 根据创建时间判定：2026-06-06 导入的所有内置旅游攻略文档均在 2026-06-07 之前
+  const createdAt = new Date(doc.created_at);
+  if (!Number.isNaN(createdAt.getTime()) && createdAt.getTime() < new Date("2026-06-07T00:00:00Z").getTime()) {
+    return true;
+  }
+  // 2. 根据标题特征及预定义列表判定，防止重新导入时时间变更
+  const title = doc.title.trim();
+  if (PRE_SEEDED_TITLES.has(title)) {
+    return true;
+  }
+  if (title.includes("5A景区") || title.endsWith("旅游攻略") || title.endsWith("游记（精选）")) {
+    return true;
+  }
+  return false;
+}
+
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [title, setTitle] = useState("");
@@ -112,6 +140,8 @@ export default function DocumentsPage() {
   const [chatMessages, setChatMessages] = useState<DocumentChatMessage[]>([]);
   const [chatError, setChatError] = useState<string | null>(null);
   const [isChatLoading, setIsChatLoading] = useState(false);
+
+  const visibleDocuments = documents.filter((doc) => !isPreSeededTravelDoc(doc));
 
   const fetchDocuments = useCallback(async () => {
     setError(null);
@@ -307,7 +337,7 @@ export default function DocumentsPage() {
                   type="text"
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  placeholder="例如：北京5日深度游攻略"
+                  placeholder="请输入关键字"
                   className="h-11 rounded-xl"
                 />
               </label>
@@ -318,7 +348,7 @@ export default function DocumentsPage() {
                   type="text"
                   value={tags}
                   onChange={(event) => setTags(event.target.value)}
-                  placeholder="例如：北京,美食,地铁"
+                  placeholder="请输入关键字"
                   className="h-11 rounded-xl"
                 />
               </label>
@@ -361,13 +391,13 @@ export default function DocumentsPage() {
                   <LoaderCircleIcon className="size-4 animate-spin" />
                   正在加载文档列表...
                 </div>
-              ) : documents.length === 0 ? (
+              ) : visibleDocuments.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500">
-                  当前还没有文档，上传后会在这里显示。
+                  当前还没有自己上传的文档，上传后会在这里显示。
                 </div>
               ) : (
                 <div className="grid gap-3">
-                  {documents.map((doc) => (
+                  {visibleDocuments.map((doc) => (
                     <article
                       key={doc.id}
                       className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-zinc-200 px-4 py-3"
@@ -438,7 +468,7 @@ export default function DocumentsPage() {
               <div className="h-[56dvh] min-h-[420px] overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50 p-3">
                 {chatMessages.length === 0 ? (
                   <p className="text-sm text-zinc-500">
-                    先上传文档，再在这里提问，例如：“这份攻略里推荐的行程顺序是什么？”
+                    先上传文档，再在这里提问......
                   </p>
                 ) : (
                   <div className="space-y-3">
